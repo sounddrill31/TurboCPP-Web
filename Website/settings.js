@@ -1,7 +1,7 @@
 var DOSWASMSETTINGS = {
     CLOUDSAVEURL: "",
     ISOURL: "",
-    DEFAULTIMG: "https://cdn.jsdelivr.net/sounddrill31/TurboCPP-Web@doswasmx/images/06092024/hdd1.img"
+    DEFAULTIMG: "https://azcyouth.in/extra-cdn/images/tcpp-wasmx/06092024/hdd.img"
 }
 
 var rando = Math.floor(Math.random() * Math.floor(100000));

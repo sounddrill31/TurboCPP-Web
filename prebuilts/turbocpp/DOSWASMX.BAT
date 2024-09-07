@@ -1,2 +1,4 @@
-cd TURBOC\BIN
+mount C .
+C:
+cd BIN
 tc.exe

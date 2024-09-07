@@ -1,4 +1,2 @@
-mount C .
-C:
-cd BIN
-tc.exe
+INSTALL.BAT
+START.BAT

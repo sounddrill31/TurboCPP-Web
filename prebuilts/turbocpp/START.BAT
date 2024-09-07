@@ -1,0 +1,2 @@
+cd BIN
+tc.exe

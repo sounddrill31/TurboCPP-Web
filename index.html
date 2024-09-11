@@ -34,6 +34,23 @@
             font-size: 18px;
             color: #fff;
         }
+
+        /* Add styles for the popup message */
+        #browser-warning {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #fff; /* white background */
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            color: #000; /* black text */
+        }
+
+        #browser-warning:hover {
+            background-color: #FFA07A; /* darker yellow-orange */
+        }
     </style>
 
     <!-- js-dos style sheet -->
@@ -65,6 +82,25 @@
                 this.style.display = "none";
             }
         });
+
+        // Add code to detect browser type and display popup message
+        var userAgent = navigator.userAgent;
+        var isChromium = userAgent.indexOf("Chromium") > -1 || userAgent.indexOf("Chrome") > -1;
+
+        if (!isChromium) {
+            var warningMessage = document.createElement("div");
+            warningMessage.id = "browser-warning";
+            warningMessage.innerHTML = "<p>Non Chromium Browsers are not fully supported</p><p>Plus and Equals symbols not working on firefox</p>";
+            document.body.appendChild(warningMessage);
+
+            warningMessage.addEventListener("click", function() {
+                this.style.display = "none";
+            });
+
+            setTimeout(function() {
+                warningMessage.style.display = "none";
+            }, 45000); // hide after 45 seconds
+        }
     </script>
 </body>
 </html>

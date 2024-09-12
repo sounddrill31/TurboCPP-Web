@@ -1,3 +1,6 @@
+:: Kill all instances of nginx
+taskkill /im nginx.exe /f
+
 :: Remove all files in prebuilts\nginx-1.27.1\html
 del /q /s prebuilts\nginx-1.27.1\html\*
 
@@ -8,4 +11,5 @@ copy /y *.jsdos prebuilts\nginx-1.27.1\html
 
 :: Change directory to prebuilts\nginx-1.27.1 and run nginx.exe
 cd /d prebuilts\nginx-1.27.1
-start nginx.exe
+if not exist temp mkdir temp
+nginx.exe -c conf/nginx.conf 

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="description" content="Turbo C++ Web - Run Turbo C++ in your browser using JS-DOS. Experience nostalgic programming with modern convenience.">
     <meta name="keywords" content="Turbo C++, JS-DOS, online IDE, programming, nostalgia">
     <meta name="author" content="Souhrud Reddy">
@@ -13,6 +13,7 @@
             height: 100%;
             margin: 0;
             padding: 0;
+            overflow: hidden;
         }
 
         #dos {
@@ -33,6 +34,7 @@
             color: #fff;
             z-index: 1000;
             transition: transform 0.3s ease;
+            box-sizing: border-box;
         }
 
         #credit-bar.hidden {
@@ -75,15 +77,32 @@
             cursor: pointer;
             color: #000;
             z-index: 1001;
+            font-size: 14px;
+            max-width: 80%;
         }
 
         #browser-warning:hover {
             background-color: #FFA07A;
         }
+
+        @media (max-width: 600px) {
+            #credit-bar {
+                font-size: 10px;
+            }
+            #browser-warning {
+                font-size: 12px;
+            }
+        }
     </style>
 
-<link rel="stylesheet" href="jsdos/js-dos.css">
-<script src="jsdos/js-dos.js"></script>
+    <link rel="stylesheet" href="jsdos/js-dos.css">
+    <script src="jsdos/js-dos.js"></script>
+
+    <!-- Capacitor Core -->
+    <script src="https://unpkg.com/@capacitor/core@latest/dist/capacitor.js"></script>
+    <!-- Capacitor Plugins -->
+    <script src="https://unpkg.com/@capacitor/keyboard@latest/dist/plugin.js"></script>
+    <script src="https://unpkg.com/@capacitor/status-bar@latest/dist/plugin.js"></script>
 </head>
 <body>
     <main id="dos" role="main"></main>
@@ -128,6 +147,12 @@
             url: "turbocpp-831b2f5.jsdos",
         }).then((ci) => {
             console.log("DOS initialized");
+            // Adjust canvas size for mobile
+            const canvas = document.querySelector("#dos canvas");
+            if (canvas) {
+                canvas.style.width = "100%";
+                canvas.style.height = "100%";
+            }
         });
 
         var userAgent = navigator.userAgent;
@@ -146,6 +171,24 @@
             setTimeout(function() {
                 warningMessage.style.display = "none";
             }, 45000);
+        }
+
+        // Capacitor-specific code
+        document.addEventListener('deviceready', onDeviceReady, false);
+
+        function onDeviceReady() {
+            console.log('Running cordova-' + cordova.platformId + '@' + cordova.version);
+            
+            // Hide the status bar on iOS devices
+            if (window.StatusBar) {
+                StatusBar.hide();
+            }
+
+            // Prevent the keyboard from shrinking the WebView on iOS
+            if (window.Keyboard) {
+                Keyboard.shrinkView(false);
+                Keyboard.hideFormAccessoryBar(true);
+            }
         }
     </script>
 </body>

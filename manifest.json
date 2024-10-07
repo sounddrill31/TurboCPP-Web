@@ -10,7 +10,7 @@
   "orientation": "any",
   "icons": [
       {
-          "src": "https://turboc.pages.dev/favicon.ico",
+          "src": "https://turboc.pages.dev/turboc.png",
           "sizes": "1024x1024"
       }
   ]

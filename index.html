@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Turbo ASM Web - Run Turbo Assembler in your browser using JS-DOS. Experience classic assembly programming with modern convenience.">
+    <meta name="keywords" content="Turbo ASM, TASM, JS-DOS, online IDE, assembly programming, nostalgia">
+    <meta name="author" content="Souhrud Reddy">
+    <title>Turbo ASM Web - Online Assembly Programming Experience</title>
+
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        header {
+            background-color: #032B44;
+            color: white !important;
+            padding: 20px;
+            text-align: center;
+            border-bottom-left-radius: 15px;
+            border-bottom-right-radius: 15px;
+            width: 90%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1, h2, h3, p {
+            color: inherit !important;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .tagline {
+            font-style: italic;
+            margin-top: 10px;
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        #dos-container {
+            width: 90%;
+            max-width: 640px;
+            aspect-ratio: 4 / 3;
+            margin: 20px auto;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        #dos {
+            width: 100%;
+            height: 100%;
+        }
+
+        .content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            width: 90%;
+            max-width: 800px;
+        }
+
+        .content h2 {
+            font-size: 28px;
+            margin-bottom: 20px;
+            color: #032B44 !important;
+        }
+
+        .content-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 10px;
+        }
+
+        .content-section h3 {
+            font-size: 20px;
+            margin-top: 0;
+            color: #032B44 !important;
+        }
+
+        #credit-bar {
+            background-color: #032B44;
+            color: white !important;
+            padding: 10px;
+            text-align: center;
+            font-size: 12px;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+        }
+
+        #credit-bar.hidden {
+            transform: translateY(100%);
+        }
+
+        #credit-bar a {
+            color: #ADD8E6 !important;
+            text-decoration: none;
+        }
+
+        #credit-bar a:hover {
+            text-decoration: underline;
+        }
+
+        .close {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .close:hover {
+            background-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .close::before {
+            content: "\00d7";
+            font-size: 24px;
+            line-height: 1;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 20px;
+            }
+
+            .content {
+                padding: 15px;
+            }
+        }
+    </style>
+
+    <link rel="stylesheet" href="https://v8.js-dos.com/latest/js-dos.css">
+    <script src="https://v8.js-dos.com/latest/js-dos.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Turbo ASM Web - Run Turbo Assembler in your browser using JS-DOS</h1>
+            <p class="tagline">Experience classic assembly programming with modern convenience</p>
+        </header>
+
+        <main>
+            <div id="dos-container">
+                <div id="dos"></div>
+            </div>
+            <div class="content">
+                <h2>About Turbo ASM Web</h2>
+                <div class="content-section">
+                    <h3>Project Overview</h3>
+                    <p>Turbo ASM Web brings the classic Turbo Assembler to your browser, allowing you to write and run assembly code without any installation. This project aims to provide a nostalgic yet practical platform for assembly programming enthusiasts, students, and professionals alike.</p>
+                </div>
+                <div class="content-section">
+                    <h3>Technology</h3>
+                    <p>Powered by JS-DOS, this web application emulates the Turbo Assembler environment, giving you a faithful reproduction of the original software. You can write, assemble, and run your assembly code directly in your web browser, making it accessible from any device with an internet connection.</p>
+                </div>
+                <div class="content-section">
+                    <h3>Features</h3>
+                    <p>Turbo ASM Web offers a full-featured assembly development environment, including the assembler, linker, and debugger. You can create, edit, and run your assembly programs just as you would in the original Turbo Assembler, but with the added convenience of web accessibility.</p>
+                </div>
+                <div class="content-section">
+                    <h3>Get Started</h3>
+                    <p>Ready to dive into assembly programming? Just use the emulator above to start coding. Whether you're learning assembly language, working on a retro project, or simply enjoying some programming nostalgia, Turbo ASM Web has got you covered!</p>
+                </div>
+            </div>
+        </main>
+
+        <footer id="credit-bar">
+            <span class="close" aria-label="Close credits"></span>
+            <p>Credit to <a href="https://js-dos.com" target="_blank" rel="noopener noreferrer">JS-DOS team</a> for Everything,</p>
+            <p><a href="https://github.com/qb40/tasm" target="_blank" rel="noopener noreferrer">qb40</a> for the project and jsdos file</p>
+        </footer>
+    </div>
+
+    <script>
+        const dosElement = document.getElementById("dos");
+        const creditBar = document.getElementById("credit-bar");
+        const closeButton = creditBar.querySelector(".close");
+
+        function toggleCreditBar() {
+            creditBar.classList.toggle("hidden");
+        }
+
+        closeButton.addEventListener("click", toggleCreditBar);
+
+        Dos(dosElement, {
+            url: "https://cdn.jsdelivr.net/gh/sounddrill31/TurboCPP-Web@gh-pages/tasm/tasm-qb40-315a5fa.jsdos",
+        }).then((ci) => {
+            console.log("DOS initialized");
+        });
+    </script>
+</body>
+</html>

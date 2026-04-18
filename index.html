@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turbo C++ Web - Online Nostalgic Programming Experience</title>
+    <meta name="description" content="Run Turbo C++ in your browser using JS-DOS. Experience nostalgic programming with modern convenience.">
+    <meta name="keywords" content="Turbo C++, JS-DOS, online IDE, programming, nostalgia">
+    <meta name="author" content="Souhrud Reddy">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://turboc.pages.dev/">
+    <meta property="og:title" content="Turbo C++ Web - Online Nostalgic Programming Experience">
+    <meta property="og:description" content="Experience nostalgic programming with modern convenience. Run Turbo C++ online.">
+    <meta property="og:image" content="https://turboc.pages.dev/turboc.png">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta property="twitter:title" content="Turbo C++ Web">
+    <meta property="twitter:description" content="Run Turbo C++ in your browser.">
+    <meta property="twitter:image" content="https://turboc.pages.dev/turboc.png">
+
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="manifest" href="manifest.json">
+
+    <!-- CSS / Fonts -->
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://v8.js-dos.com/latest/js-dos.css">
+</head>
+<body class="bg-white text-black min-h-screen flex flex-col">
+    <div id="app" v-cloak>
+        <!-- Navigation -->
+        <nav class="fixed w-full px-4 py-3 flex justify-between items-center z-50 bg-white border-b-4 border-black">
+            <a href="#" class="text-2xl font-bold tracking-tighter uppercase">Turbo C++<span class="text-xs align-super">WEB</span></a>
+            <div class="flex gap-6">
+                <a href="#about" class="text-sm font-bold hover:underline decoration-4 underline-offset-4">ABOUT</a>
+                <a href="https://github.com/sounddrill31/TurboCPP-Web" class="text-sm font-bold hover:underline decoration-4 underline-offset-4">GITHUB</a>
+            </div>
+        </nav>
+
+        <!-- Hero Section -->
+        <header class="min-h-screen flex flex-col items-center justify-center pt-24 pb-12 px-4 relative overflow-hidden">
+            <div class="absolute inset-0 z-0 opacity-5 pointer-events-none">
+                <div class="diagonal-stripes w-full h-full"></div>
+            </div>
+
+            <div class="z-10 w-full max-w-5xl flex flex-col items-center">
+                <h1 class="text-5xl md:text-7xl font-bold mb-8 text-center leading-none tracking-tighter uppercase">
+                    CODE LIKE IT'S<br>
+                    <span class="bg-black text-white px-4">1992</span>
+                </h1>
+
+                <!-- JS-DOS Container -->
+                <div class="w-full aspect-[4/3] md:aspect-video bg-black border-[12px] border-black shadow-[20px_20px_0px_0px_rgba(0,0,0,0.1)] relative overflow-hidden group">
+                    <div id="dos"></div>
+                </div>
+
+                <p class="mt-8 text-lg font-bold uppercase tracking-widest text-center">
+                    The focus is the code. Nothing else matters.
+                </p>
+            </div>
+        </header>
+
+        <!-- Marquee -->
+        <div class="bg-black text-white py-4 overflow-hidden whitespace-nowrap border-y-4 border-black">
+            <div class="animate-scroll inline-block uppercase font-bold text-xl">
+                LIMITATIONS BREED CREATIVITY • 16-BIT POWER • BGI GRAPHICS • C++ • NOSTALGIA IS THE VOICE OF CODE • 
+                LIMITATIONS BREED CREATIVITY • 16-BIT POWER • BGI GRAPHICS • C++ • NOSTALGIA IS THE VOICE OF CODE •
+            </div>
+        </div>
+
+        <!-- About Section -->
+        <section id="about" class="py-24 px-8 max-w-6xl mx-auto">
+            <h2 class="text-5xl font-bold mb-16 uppercase tracking-tighter">
+                THE<span class="text-xs align-super">MANIFESTO</span>
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                <div class="border-4 border-black p-8 relative group hover:bg-black hover:text-white transition-colors duration-300">
+                    <div class="absolute -top-1 -left-1 w-8 h-8 bg-black group-hover:bg-white transition-colors"></div>
+                    <h3 class="text-3xl font-bold mb-4 uppercase">Project Origin</h3>
+                    <p class="text-lg leading-tight">
+                        As a BCA student, I was introduced to Turbo C++ in my first semester. 
+                        I created this web version as a gift to my juniors to skip the setup hell.
+                    </p>
+                </div>
+
+                <div class="border-4 border-black p-8 relative group hover:bg-black hover:text-white transition-colors duration-300">
+                    <div class="absolute -bottom-1 -right-1 w-8 h-8 bg-black group-hover:bg-white transition-colors"></div>
+                    <h3 class="text-3xl font-bold mb-4 uppercase">Technology</h3>
+                    <p class="text-lg leading-tight">
+                        Powered by JS-DOS. Wrapped in a monochromatic shell for ultimate focus. 
+                        No installation. No configuration. Just code.
+                    </p>
+                </div>
+
+                <div class="border-4 border-black p-8 md:col-span-2 relative group hover:bg-black hover:text-white transition-colors duration-300">
+                    <h3 class="text-3xl font-bold mb-4 uppercase">Connect</h3>
+                    <div class="flex flex-wrap gap-8 mt-6">
+                        <a href="https://www.youtube.com/@TurboCPPWeb" class="text-xl font-bold underline decoration-4 underline-offset-8">YOUTUBE</a>
+                        <a href="https://www.instagram.com/turboc.pages.dev" class="text-xl font-bold underline decoration-4 underline-offset-8">INSTAGRAM</a>
+                        <a href="https://github.com/sounddrill31/TurboCPP-Web" class="text-xl font-bold underline decoration-4 underline-offset-8">GITHUB</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Browser Warning -->
+        <div v-if="showWarning" @click="showWarning = false" class="fixed top-20 right-4 z-[60] bg-black text-white p-6 border-4 border-white shadow-2xl cursor-pointer max-w-xs transition-all hover:scale-105">
+            <p class="font-bold uppercase mb-2">⚠ Browser Warning</p>
+            <p class="text-sm">Non-Chromium browsers may experience issues with key mappings (like + and =).</p>
+            <p class="text-xs mt-4 opacity-70 underline">Click to dismiss</p>
+        </div>
+
+        <!-- Footer -->
+        <footer class="py-12 px-8 border-t-4 border-black mt-auto">
+            <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
+                <div>
+                    <p class="text-2xl font-bold tracking-tighter uppercase">Turbo C++<span class="text-xs align-super">WEB</span></p>
+                    <p class="text-sm opacity-60 mt-2">© 2026 SOUHRUD REDDY</p>
+                </div>
+                <div class="flex flex-col items-end gap-2 text-right">
+                    <p class="text-sm font-bold">POWERED BY JS-DOS</p>
+                    <p class="text-xs max-w-xs opacity-60">Special thanks to AvinashReddy3108 and vineetchoudhary for their DOSBox wrapper projects.</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script>
+        const { createApp, ref, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                const showWarning = ref(false);
+                
+                const loadScript = (url) => {
+                    return new Promise((resolve, reject) => {
+                        console.log(`[DEBUG] Loading script: ${url}`);
+                        const script = document.createElement("script");
+                        script.src = url;
+                        script.onload = () => {
+                            console.log(`[DEBUG] Script loaded: ${url}`);
+                            resolve();
+                        };
+                        script.onerror = () => reject(new Error(`Failed to load script: ${url}`));
+                        document.head.appendChild(script);
+                    });
+                };
+
+                onMounted(async () => {
+                    try {
+                        // In v8, we need emulators.js specifically for the global emulators object
+                        await loadScript("https://v8.js-dos.com/latest/emulators/emulators.js");
+                        // We also need js-dos.js for the player
+                        await loadScript("https://v8.js-dos.com/latest/js-dos.js");
+                        
+                        // Wait for both window.Dos and window.emulators
+                        let attempts = 0;
+                        while ((typeof window.Dos === "undefined" || typeof window.emulators === "undefined") && attempts < 50) {
+                            await new Promise(r => setTimeout(r, 100));
+                            attempts++;
+                        }
+
+                        console.log("[DEBUG] Initialization sequence starting...");
+                        const userAgent = navigator.userAgent;
+                        const isChromium = userAgent.indexOf("Chromium") > -1 || userAgent.indexOf("Chrome") > -1;
+                        if (!isChromium) showWarning.value = true;
+
+                        const dosElement = document.getElementById("dos");
+                        
+                        if (!dosElement) throw new Error("#dos element not found!");
+                        if (typeof window.Dos === "undefined") throw new Error("window.Dos is undefined!");
+                        if (typeof window.emulators === "undefined") throw new Error("window.emulators is undefined!");
+
+                        console.log("[DEBUG] Environment ready. Configuring emulators...");
+                        
+                        // Clear jsdos storage to avoid stale bundle extraction
+                        try {
+                            console.log("[DEBUG] Clearing JS-DOS storage and IndexedDB...");
+                            if (window.Dos && window.Dos.storage) {
+                                await window.Dos.storage.clear();
+                            }
+                            indexedDB.deleteDatabase("jsdos");
+                        } catch (e) {
+                            console.warn("Failed to clear storage", e);
+                        }
+
+                        const emulators = window.emulators;
+                        emulators.pathPrefix = "https://v8.js-dos.com/latest/emulators/";
+                        
+                        const localUrl = "turbocpp.jsdos?v=" + new Date().getTime();
+
+                        console.log(`[DEBUG] Starting Dos() with local bundle: ${localUrl}`);
+                        Dos(dosElement, {
+                            url: localUrl,
+                            onEvent: (event, ci) => {
+                                console.log(`[DEBUG] Event: ${event}`);
+                                if (event === "ready" || event === "ci-ready") {
+                                    console.log("[DEBUG] System ready to interact.");
+                                }
+                            }
+                        });
+
+                    } catch (err) {
+                        console.error("[DEBUG] CRITICAL INIT ERROR:", err);
+                        const dosElement = document.getElementById("dos");
+                        if (dosElement) {
+                            dosElement.innerHTML = `<div class="p-8 text-red-500 font-bold text-center uppercase tracking-widest">
+                                Error: System Initialization Failed<br>
+                                <span class="text-xs opacity-50 mt-4 block">${err.message}</span>
+                            </div>`;
+                        }
+                    }
+                });
+
+                return {
+                    showWarning
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

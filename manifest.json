@@ -1,0 +1,17 @@
+{
+  "name": "Turbo C++ Web",
+  "short_name": "turboc",
+  "theme_color": "#1F2431",
+  "background_color": "#2986cc",
+  "display": "standalone",
+  "scope": "/",
+  "start_url": "https://turboc.pages.dev/",
+  "description": "Turbo C++ In Web Browser",
+  "orientation": "any",
+  "icons": [
+      {
+          "src": "https://turboc.pages.dev/turboc.png",
+          "sizes": "1024x1024"
+      }
+  ]
+}

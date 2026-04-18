@@ -28,7 +28,10 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://v8.js-dos.com/latest/js-dos.css">
     <style>
+        @import url("https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap");
+        
         [v-cloak] { display: none; }
+        * { font-family: "Space Mono", monospace; }
         #dos:focus { outline: none; }
         
         #dos-container {
@@ -37,15 +40,21 @@
             flex-direction: column;
         }
 
-        /* Lexical OSK Bridge Styling */
+        /* Lexical OSK Bridge - Optimized for IME Gestures */
         #lexical-bridge {
             position: absolute;
-            left: -9999px;
-            top: 0;
-            width: 1px;
-            height: 1px;
-            opacity: 0;
-            pointer-events: none;
+            left: 50%;
+            top: 50%;
+            width: 20px;
+            height: 20px;
+            opacity: 0.01;
+            pointer-events: auto;
+            z-index: -1;
+            overflow: hidden;
+            white-space: pre;
+            background: transparent;
+            border: none;
+            outline: none;
         }
 
         /* Fullscreen support */
@@ -53,6 +62,28 @@
 
         /* Conditional hiding of internal overlay when Native toggle is ON */
         .native-osk-on .soft-keyboard { display: none !important; }
+
+        .osk-toggle-container {
+            @apply mt-8 flex flex-col items-center gap-4 mb-12;
+        }
+        .osk-actual-toggle {
+            @apply flex items-center gap-6 p-4 border-4 border-black bg-white transition-all cursor-pointer shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1;
+        }
+        .switch-track {
+            @apply w-16 h-8 border-4 border-black relative transition-colors duration-300;
+            background-color: white;
+        }
+        .osk-actual-toggle.active .switch-track {
+            @apply bg-black;
+        }
+        .switch-knob {
+            @apply absolute top-0 w-6 h-full bg-black transition-all duration-300;
+            left: 0;
+        }
+        .osk-actual-toggle.active .switch-knob {
+            @apply bg-white;
+            left: calc(100% - 24px);
+        }
     </style>
 </head>
 <body class="bg-white text-black min-h-screen flex flex-col">
@@ -81,18 +112,20 @@
                 <!-- JS-DOS Container -->
                 <div id="dos-container" class="w-full aspect-[4/3] md:aspect-video bg-black border-[12px] border-black shadow-[20px_20px_0px_0px_rgba(0,0,0,0.1)] overflow-hidden" @click="handleViewportClick">
                     <div id="dos"></div>
-                    <!-- Lexical Bridge goes inside for Fullscreen focus -->
+                    <!-- Lexical Bridge -->
                     <div id="lexical-bridge" contenteditable="true"></div>
                 </div>
 
-                <div class="mt-6 flex flex-col items-center gap-4">
-                    <div class="flex items-center gap-4 p-4 border-4 border-black bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all cursor-pointer" @click="enableNativeOSK = !enableNativeOSK">
-                        <div class="w-12 h-6 border-4 border-black relative bg-white">
-                            <div class="absolute top-0 w-4 h-4 bg-black transition-all" :style="{ left: enableNativeOSK ? '24px' : '0' }"></div>
+                <div class="osk-toggle-container">
+                    <div class="osk-actual-toggle" :class="{ active: enableNativeOSK }" @click="enableNativeOSK = !enableNativeOSK">
+                        <div class="switch-track">
+                            <div class="switch-knob"></div>
                         </div>
-                        <span class="font-bold uppercase tracking-tighter">Native OS Keyboard</span>
+                        <div class="flex flex-col">
+                            <span class="text-xl font-bold uppercase tracking-tighter leading-none">Native Keyboard: {{ enableNativeOSK ? 'ON' : 'OFF' }}</span>
+                        </div>
                     </div>
-                    <p class="text-[10px] font-bold uppercase opacity-60">Enabling this opens your device's keyboard on click</p>
+                    <p class="text-[10px] font-bold uppercase tracking-widest opacity-60">Enabling this opens your device's keyboard on click</p>
                 </div>
 
                 <p class="mt-8 text-lg font-bold uppercase tracking-widest text-center">
@@ -155,7 +188,7 @@
         <!-- Mobile Tip -->
         <div v-if="showMobileTip" @click="showMobileTip = false" class="fixed bottom-8 left-4 z-[60] bg-black text-white p-6 border-4 border-white shadow-2xl cursor-pointer max-w-xs transition-all hover:scale-105">
             <p class="font-bold uppercase mb-2">📱 Mobile Tip</p>
-            <p class="text-sm">Android users: Ensure Gboard suggestions are off for the best experience with special characters.</p>
+            <p class="text-sm">Swipe gestures (Spacebar to move, Backspace to delete) are now supported on mobile!</p>
             <p class="text-xs mt-4 opacity-70 underline">Click to dismiss</p>
         </div>
 
@@ -177,48 +210,38 @@
     <!-- Scripts -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <script type="module">
-        import { createEditor, COMMAND_PRIORITY_EDITOR, CONTROLLED_TEXT_INSERTION_COMMAND, KEY_BACKSPACE_COMMAND, KEY_ENTER_COMMAND, KEY_TAB_COMMAND, KEY_ESCAPE_COMMAND, $getRoot } from 'https://esm.sh/lexical';
+        import { createEditor, COMMAND_PRIORITY_CRITICAL, CONTROLLED_TEXT_INSERTION_COMMAND, KEY_BACKSPACE_COMMAND, KEY_ENTER_COMMAND, KEY_TAB_COMMAND, KEY_ESCAPE_COMMAND, $getRoot, $getSelection, $setSelection } from 'https://esm.sh/lexical';
         import { registerPlainText } from 'https://esm.sh/@lexical/plain-text';
 
         const { createApp, ref, onMounted } = Vue;
 
         createApp({
             setup() {
-                const showWarning = ref(false);
-                const showMobileTip = ref(false);
-                const enableNativeOSK = ref(false);
-                const ci = ref(null);
+                const showWarning = ref(false), showMobileTip = ref(false), enableNativeOSK = ref(false), ci = ref(null);
                 let lexicalRoot = null;
                 
-                // DOS Scancode Constants
                 const K = {
-                    '1': 49, '2': 50, '3': 51, '4': 52, '5': 53, '6': 54, '7': 55, '8': 56, '9': 57, '0': 48,
-                    'q': 81, 'w': 87, 'e': 69, 'r': 82, 't': 84, 'y': 89, 'u': 85, 'i': 73, 'o': 79, 'p': 80,
-                    'a': 65, 's': 83, 'd': 68, 'f': 70, 'g': 71, 'h': 72, 'j': 74, 'k': 75, 'l': 76,
-                    'z': 90, 'x': 88, 'c': 67, 'v': 86, 'b': 66, 'n': 78, 'm': 77,
-                    'Enter': 257, 'Backspace': 259, 'Space': 32, ' ': 32, 'Esc': 256, 'Tab': 258,
-                    'Ctrl': 341, 'Alt': 342, 'Shift': 340,
-                    '-': 45, '=': 61, '[': 91, ']': 93, '\\': 92, ';': 59, '\'': 39, ',': 44, '.': 46, '/': 47, '`': 96
+                    '1':49,'2':50,'3':51,'4':52,'5':53,'6':54,'7':55,'8':56,'9':57,'0':48,
+                    'q':81,'w':87,'e':69,'r':82,'t':84,'y':89,'u':85,'i':73,'o':79,'p':80,
+                    'a':65,'s':83,'d':68,'f':70,'g':71,'h':72,'j':74,'k':75,'l':76,
+                    'z':90,'x':88,'c':67,'v':86,'b':66,'n':78,'m':77,
+                    'Enter':257,'Backspace':259,'Space':32,' ':32,'Esc':256,'Tab':258,
+                    'Ctrl':341,'Alt':342,'Shift':340,
+                    'ArrowUp':265,'ArrowDown':264,'ArrowLeft':263,'ArrowRight':262,
+                    '-':45,'=':61,'[':91,']':93,'\\':92,';':59,'\'':39,',':44,'.':46,'/':47,'`':96
                 };
 
                 const SHIFT_MAP = {
-                    '!': '1', '@': '2', '#': '3', '$': '4', '%': '5', '^': '6', '&': '7', '*': '8', '(': '9', ')': '0',
-                    '_': '-', '+': '=', '{': '[', '}': ']', '|': '\\', ':': ';', '\"': '\'', '<': ',', '>': '.', '?': '/', '~': '`',
-                    'Q': 'q', 'W': 'w', 'E': 'e', 'R': 'r', 'T': 't', 'Y': 'y', 'U': 'u', 'I': 'i', 'O': 'o', 'P': 'p',
-                    'A': 'a', 'S': 's', 'D': 'd', 'F': 'f', 'G': 'g', 'H': 'h', 'J': 'j', 'K': 'k', 'L': 'l',
-                    'Z': 'z', 'X': 'x', 'C': 'c', 'V': 'v', 'B': 'b', 'N': 'n', 'M': 'm'
+                    '!':'1','@':'2','#':'3','$':'4','%':'5','^':'6','&':'7','*':'8','(':'9',')':'0',
+                    '_':'-','+':'=','{':'[','}':']','|':'\\',':':';','\"':'\'','<':',','>':'.','?':'/','~':'`','Q':'q','W':'w','E':'e','R':'r','T':'t','Y':'y','U':'u','I':'i','O':'o','P':'p','A':'a','S':'s','D':'d','F':'f','G':'g','H':'h','J':'j','K':'k','L':'l','Z':'z','X':'x','C':'c','V':'v','B':'b','N':'n','M':'m'
                 };
 
                 const sendToDos = (charOrKey) => {
                     if (!ci.value) return;
-                    console.log(`[DEBUG] Lexical -> DOS: ${charOrKey}`);
-                    
                     let needsShift = !!SHIFT_MAP[charOrKey] || (charOrKey.length === 1 && charOrKey >= 'A' && charOrKey <= 'Z');
                     let targetKey = SHIFT_MAP[charOrKey] || charOrKey;
                     let code = K[targetKey.toLowerCase()] || K[targetKey];
-
                     if (!code) return;
-
                     if (needsShift) ci.value.sendKeyEvent(340, true);
                     ci.value.sendKeyEvent(code, true);
                     setTimeout(() => {
@@ -227,81 +250,82 @@
                     }, 30);
                 };
 
-                const handleViewportClick = () => {
-                    if (enableNativeOSK.value && lexicalRoot) {
-                        lexicalRoot.focus();
-                    }
-                };
+                const handleViewportClick = () => { if (enableNativeOSK.value && lexicalRoot) lexicalRoot.focus(); };
 
                 const setupLexical = () => {
-                    const editor = createEditor({
-                        namespace: 'DosBridge',
-                        onError: (e) => console.error(e)
-                    });
+                    const editor = createEditor({ namespace: 'DosBridge', onError: (e) => console.error(e) });
                     const rootElement = document.getElementById('lexical-bridge');
                     lexicalRoot = rootElement;
                     editor.setRootElement(rootElement);
                     registerPlainText(editor);
 
-                    let lastText = "";
-                    editor.registerUpdateListener(({ editorState }) => {
-                        editorState.read(() => {
-                            const currentText = $getRoot().getTextContent();
-                            if (currentText.length > lastText.length) {
-                                // New characters added
-                                const added = currentText.slice(lastText.length);
-                                for (const char of added) sendToDos(char);
-                            } else if (currentText.length < lastText.length) {
-                                // Deletions occurred
-                                const diff = lastText.length - currentText.length;
-                                for (let i = 0; i < diff; i++) sendToDos('Backspace');
+                    const ghostBuffer = " ".repeat(100);
+                    const center = 50;
+
+                    const initBuffer = () => {
+                        editor.update(() => {
+                            $getRoot().append($getRoot().clear().append(ghostBuffer));
+                            const sel = $getSelection();
+                            if (sel) sel.anchor.set('root', center, 'text');
+                        });
+                    };
+                    initBuffer();
+
+                    // GESTURE: Spacebar Swipe
+                    document.addEventListener('selectionchange', () => {
+                        if (document.activeElement !== rootElement || !enableNativeOSK.value) return;
+                        editor.read(() => {
+                            const sel = $getSelection();
+                            if (sel && sel.isCollapsed()) {
+                                const pos = sel.anchor.offset;
+                                if (pos < center) for (let i=0; i<(center-pos); i++) sendToDos('ArrowLeft');
+                                else if (pos > center) for (let i=0; i<(pos-center); i++) sendToDos('ArrowRight');
+                                if (pos !== center) editor.update(() => { const s = $getSelection(); if (s) s.anchor.set(s.anchor.key, center, 'text'); });
                             }
-                            lastText = currentText;
                         });
                     });
 
-                    // Keep bridge clean to prevent overflow
-                    setInterval(() => {
-                        if (lastText.length > 50) {
-                            editor.update(() => {
-                                $getRoot().clear();
-                                lastText = "";
+                    // GESTURE: Glide Delete
+                    editor.registerUpdateListener(({ editorState, prevEditorState }) => {
+                        editorState.read(() => {
+                            const cur = $getRoot().getTextContent();
+                            prevEditorState.read(() => {
+                                const prev = $getRoot().getTextContent();
+                                if (cur.length < prev.length) {
+                                    for (let i=0; i<(prev.length - cur.length); i++) sendToDos('Backspace');
+                                    initBuffer();
+                                }
                             });
-                        }
-                    }, 1000);
+                        });
+                    });
 
-                    // Map special keys directly
-                    editor.registerCommand(KEY_ENTER_COMMAND, () => { sendToDos('Enter'); return false; }, COMMAND_PRIORITY_EDITOR);
-                    editor.registerCommand(KEY_TAB_COMMAND, (e) => { e.preventDefault(); sendToDos('Tab'); return false; }, COMMAND_PRIORITY_EDITOR);
-                    editor.registerCommand(KEY_ESCAPE_COMMAND, () => { sendToDos('Esc'); return false; }, COMMAND_PRIORITY_EDITOR);
+                    editor.registerCommand(CONTROLLED_TEXT_INSERTION_COMMAND, (text) => {
+                        for (const char of text) sendToDos(char);
+                        return true; 
+                    }, COMMAND_PRIORITY_CRITICAL);
+
+                    editor.registerCommand(KEY_ENTER_COMMAND, () => { sendToDos('Enter'); return true; }, COMMAND_PRIORITY_CRITICAL);
+                    editor.registerCommand(KEY_TAB_COMMAND, (e) => { e.preventDefault(); sendToDos('Tab'); return true; }, COMMAND_PRIORITY_CRITICAL);
+                    editor.registerCommand(KEY_ESCAPE_COMMAND, () => { sendToDos('Esc'); return true; }, COMMAND_PRIORITY_CRITICAL);
 
                     return { editor, rootElement };
                 };
 
-                const loadScript = (url) => {
-                    return new Promise((resolve, reject) => {
-                        const script = document.createElement("script");
-                        script.src = url;
-                        script.onload = resolve;
-                        script.onerror = reject;
-                        document.head.appendChild(script);
-                    });
-                };
+                const loadScript = (url) => new Promise((resolve, reject) => {
+                    const script = document.createElement("script");
+                    script.src = url;
+                    script.onload = resolve;
+                    script.onerror = reject;
+                    document.head.appendChild(script);
+                });
 
                 onMounted(async () => {
                     const { editor, rootElement } = setupLexical();
-
                     try {
                         await loadScript("https://v8.js-dos.com/latest/emulators/emulators.js");
                         await loadScript("https://v8.js-dos.com/latest/js-dos.js");
-                        
-                        let attempts = 0;
-                        while ((typeof window.Dos === "undefined" || typeof window.emulators === "undefined") && attempts < 50) {
-                            await new Promise(r => setTimeout(r, 100));
-                            attempts++;
-                        }
+                        while ((typeof window.Dos === "undefined" || typeof window.emulators === "undefined")) await new Promise(r => setTimeout(r, 100));
                         window.emulators.pathPrefix = "https://v8.js-dos.com/latest/emulators/";
-
                         const userAgent = navigator.userAgent;
                         if (userAgent.indexOf("Chromium") === -1 && userAgent.indexOf("Chrome") === -1) showWarning.value = true;
                         if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent)) showMobileTip.value = true;
@@ -311,27 +335,17 @@
                             onEvent: (event, ci_instance) => {
                                 if (event === "ci-ready") {
                                     ci.value = ci_instance;
-
                                     const observer = new MutationObserver(() => {
-                                        if (!enableNativeOSK.value) return; // Standard OSK handles itself
-                                        
+                                        if (!enableNativeOSK.value) return;
                                         const softKeyboardEl = document.querySelector('.soft-keyboard');
                                         const kbBtn = document.querySelector('.jsdos-sidebar .sidebar-button:nth-child(2)');
-                                        
-                                        if (softKeyboardEl || (kbBtn && kbBtn.classList.contains('sidebar-highlight'))) {
-                                            rootElement.focus();
-                                        }
+                                        if (softKeyboardEl || (kbBtn && kbBtn.classList.contains('sidebar-highlight'))) rootElement.focus();
                                     });
                                     observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
-
                                     const syncFS = () => {
                                         const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
-                                        if (fsEl && !fsEl.contains(rootElement)) {
-                                            fsEl.appendChild(rootElement);
-                                        }
-                                        if (enableNativeOSK.value && lexicalRoot) {
-                                            lexicalRoot.focus();
-                                        }
+                                        if (fsEl && !fsEl.contains(lexicalRoot)) fsEl.appendChild(lexicalRoot);
+                                        if (enableNativeOSK.value && lexicalRoot) lexicalRoot.focus();
                                     };
                                     document.addEventListener('fullscreenchange', syncFS);
                                     document.addEventListener('webkitfullscreenchange', syncFS);

@@ -113,6 +113,13 @@
             <p class="text-xs mt-4 opacity-70 underline">Click to dismiss</p>
         </div>
 
+        <!-- Mobile Tip -->
+        <div v-if="showMobileTip" @click="showMobileTip = false" class="fixed bottom-8 left-4 z-[60] bg-black text-white p-6 border-4 border-white shadow-2xl cursor-pointer max-w-xs transition-all hover:scale-105">
+            <p class="font-bold uppercase mb-2">📱 Mobile Tip</p>
+            <p class="text-sm">You may not have a good experience on a mobile phone as JS-DOS with a full keyboard struggles with certain special characters like " @ # etc.</p>
+            <p class="text-xs mt-4 opacity-70 underline">Click to dismiss</p>
+        </div>
+
         <!-- Footer -->
         <footer class="py-12 px-8 border-t-4 border-black mt-auto">
             <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
@@ -136,6 +143,7 @@
         createApp({
             setup() {
                 const showWarning = ref(false);
+                const showMobileTip = ref(false);
                 
                 const loadScript = (url) => {
                     return new Promise((resolve, reject) => {
@@ -170,6 +178,9 @@
                         const isChromium = userAgent.indexOf("Chromium") > -1 || userAgent.indexOf("Chrome") > -1;
                         if (!isChromium) showWarning.value = true;
 
+                        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+                        if (isMobile) showMobileTip.value = true;
+
                         const dosElement = document.getElementById("dos");
                         
                         if (!dosElement) throw new Error("#dos element not found!");
@@ -197,6 +208,38 @@
                         console.log(`[DEBUG] Starting Dos() with local bundle: ${localUrl}`);
                         Dos(dosElement, {
                             url: localUrl,
+                            softKeyboardLayout: [
+                                [ // Layout 1: Alphanumeric
+                                    [
+                                        "1 2 3 4 5 6 7 8 9 0",
+                                        "q w e r t y u i o p",
+                                        "a s d f g h j k l {enter}",
+                                        "{lock} z x c v b n m {bksp}",
+                                        "{ctrl} {alt} {space} {symbols} {esc} {tab} {layout}"
+                                    ]
+                                ],
+                                [ // Layout 2: Symbols & Function Keys
+                                    [
+                                        "{f1} {f2} {f3} {f4} {f5} {f6} {f7} {f8} {f9} {f10} {f11} {f12}",
+                                        "! @ # $ % ^ & * ( ) _ +",
+                                        "- = [ ] \\ ; ' , . /",
+                                        "{{ }} < > | : \" ? {enter}",
+                                        "{left} {up} {down} {right} {bksp} {layout}"
+                                    ]
+                                ]
+                            ],
+                            softKeyboardSymbols: [
+                                {
+                                    "{bksp}": "⌫", "{enter}": "⏎", "{lock}": "Caps", "{ctrl}": "Ctrl", "{alt}": "Alt", "{tab}": "Tab", "{esc}": "Esc", "{space}": "Space", "{up}": "↑", "{down}": "↓", "{left}": "←", "{right}": "→", "{layout}": "⌨", "{symbols}": "abc",
+                                    "q": "q", "w": "w", "e": "e", "r": "r", "t": "t", "y": "y", "u": "u", "i": "i", "o": "o", "p": "p", "a": "a", "s": "s", "d": "d", "f": "f", "g": "g", "h": "h", "j": "j", "k": "k", "l": "l", "z": "z", "x": "x", "c": "c", "v": "v", "b": "b", "n": "n", "m": "m",
+                                    "{{": "{", "}}": "}"
+                                },
+                                {
+                                    "{bksp}": "⌫", "{enter}": "⏎", "{lock}": "Caps", "{ctrl}": "Ctrl", "{alt}": "Alt", "{tab}": "Tab", "{esc}": "Esc", "{space}": "Space", "{up}": "↑", "{down}": "↓", "{left}": "←", "{right}": "→", "{layout}": "⌨", "{symbols}": "ABC",
+                                    "q": "Q", "w": "W", "e": "E", "r": "R", "t": "T", "y": "Y", "u": "U", "i": "I", "o": "O", "p": "P", "a": "A", "s": "S", "d": "D", "f": "F", "g": "G", "h": "H", "j": "J", "k": "K", "l": "L", "z": "Z", "x": "X", "c": "C", "v": "V", "b": "B", "n": "N", "m": "M",
+                                    "{{": "{", "}}": "}"
+                                }
+                            ],
                             onEvent: (event, ci) => {
                                 console.log(`[DEBUG] Event: ${event}`);
                                 if (event === "ready" || event === "ci-ready") {
@@ -218,7 +261,8 @@
                 });
 
                 return {
-                    showWarning
+                    showWarning,
+                    showMobileTip
                 };
             }
         }).mount('#app');

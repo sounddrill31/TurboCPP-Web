@@ -1,0 +1,12 @@
+{
+  "name": "turbocpp-web",
+  "version": "1.0.0",
+  "scripts": {
+    "build:css": "bunx @tailwindcss/cli -i ./src/input.css -o ./dist/style.css --minify",
+    "watch:css": "bunx @tailwindcss/cli -i ./src/input.css -o ./dist/style.css --watch"
+  },
+  "dependencies": {
+    "tailwindcss": "^4.0.0",
+    "@tailwindcss/cli": "^4.0.0"
+  }
+}

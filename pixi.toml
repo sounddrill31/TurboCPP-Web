@@ -1,0 +1,16 @@
+[workspace]
+name = "turbocpp-web"
+version = "1.0.0"
+description = "Turbo C++ Web - Online Nostalgic Programming Experience"
+authors = ["Souhrud Reddy <souhrud@example.com>"]
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-64", "win-64"]
+
+[dependencies]
+python = ">=3.11"
+pip = "*"
+
+[tasks]
+build = "python build.py"
+run = { cmd = "python -m http.server -d dist 8080", depends-on = ["build"] }
+watch = "bun run watch:css"

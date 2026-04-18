@@ -45,10 +45,10 @@
             position: absolute;
             left: 50%;
             top: 50%;
-            width: 20px;
-            height: 20px;
+            width: 30px;
+            height: 30px;
             opacity: 0.01;
-            pointer-events: auto;
+            pointer-events: auto; /* Required for OS to enable gestures */
             z-index: -1;
             overflow: hidden;
             white-space: pre;
@@ -62,28 +62,6 @@
 
         /* Conditional hiding of internal overlay when Native toggle is ON */
         .native-osk-on .soft-keyboard { display: none !important; }
-
-        .osk-toggle-container {
-            @apply mt-8 flex flex-col items-center gap-4 mb-12;
-        }
-        .osk-actual-toggle {
-            @apply flex items-center gap-6 p-4 border-4 border-black bg-white transition-all cursor-pointer shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1;
-        }
-        .switch-track {
-            @apply w-16 h-8 border-4 border-black relative transition-colors duration-300;
-            background-color: white;
-        }
-        .osk-actual-toggle.active .switch-track {
-            @apply bg-black;
-        }
-        .switch-knob {
-            @apply absolute top-0 w-6 h-full bg-black transition-all duration-300;
-            left: 0;
-        }
-        .osk-actual-toggle.active .switch-knob {
-            @apply bg-white;
-            left: calc(100% - 24px);
-        }
     </style>
 </head>
 <body class="bg-white text-black min-h-screen flex flex-col">
@@ -116,16 +94,17 @@
                     <div id="lexical-bridge" contenteditable="true"></div>
                 </div>
 
-                <div class="osk-toggle-container">
-                    <div class="osk-actual-toggle" :class="{ active: enableNativeOSK }" @click="enableNativeOSK = !enableNativeOSK">
-                        <div class="switch-track">
-                            <div class="switch-knob"></div>
+                <!-- Simple Sliding Toggle (Pure Tailwind) -->
+                <div class="mt-8 flex flex-col items-center gap-2 mb-12">
+                    <div class="flex items-center gap-6 px-6 py-4 border-4 border-black bg-white cursor-pointer shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all active:shadow-none active:translate-x-1 active:translate-y-1 select-none" @click="enableNativeOSK = !enableNativeOSK">
+                        <!-- Track -->
+                        <div class="w-16 h-8 border-4 border-black relative transition-colors duration-300" :class="enableNativeOSK ? 'bg-black' : 'bg-white'">
+                            <!-- Knob -->
+                            <div class="absolute top-0 w-6 h-6 transition-all duration-300" :class="enableNativeOSK ? 'left-8 bg-white' : 'left-0 bg-black'"></div>
                         </div>
-                        <div class="flex flex-col">
-                            <span class="text-xl font-bold uppercase tracking-tighter leading-none">Native Keyboard: {{ enableNativeOSK ? 'ON' : 'OFF' }}</span>
-                        </div>
+                        <span class="font-bold text-xl uppercase tracking-tighter">NATIVE OS KEYBOARD</span>
                     </div>
-                    <p class="text-[10px] font-bold uppercase tracking-widest opacity-60">Enabling this opens your device's keyboard on click</p>
+                    <p class="text-[10px] font-bold uppercase tracking-widest opacity-60 text-center">ENABLING THIS OPENS YOUR DEVICE'S KEYBOARD ON CLICK</p>
                 </div>
 
                 <p class="mt-8 text-lg font-bold uppercase tracking-widest text-center">
@@ -188,8 +167,7 @@
         <!-- Mobile Tip -->
         <div v-if="showMobileTip" @click="showMobileTip = false" class="fixed bottom-8 left-4 z-[60] bg-black text-white p-6 border-4 border-white shadow-2xl cursor-pointer max-w-xs transition-all hover:scale-105">
             <p class="font-bold uppercase mb-2">📱 Mobile Tip</p>
-            <p class="text-sm">Swipe gestures (Spacebar to move, Backspace to delete) are now supported on mobile!</p>
-            <p class="text-xs mt-4 opacity-70 underline">Click to dismiss</p>
+            <p class="text-sm">Turn on the Native OS Keyboard below to use your built-in keyboard.</p>
         </div>
 
         <!-- Footer -->
@@ -210,7 +188,7 @@
     <!-- Scripts -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <script type="module">
-        import { createEditor, COMMAND_PRIORITY_CRITICAL, CONTROLLED_TEXT_INSERTION_COMMAND, KEY_BACKSPACE_COMMAND, KEY_ENTER_COMMAND, KEY_TAB_COMMAND, KEY_ESCAPE_COMMAND, $getRoot, $getSelection, $setSelection } from 'https://esm.sh/lexical';
+        import { createEditor, COMMAND_PRIORITY_CRITICAL, CONTROLLED_TEXT_INSERTION_COMMAND, KEY_BACKSPACE_COMMAND, KEY_ENTER_COMMAND, KEY_TAB_COMMAND, KEY_ESCAPE_COMMAND, $getRoot, $createTextNode, $getSelection, $setSelection } from 'https://esm.sh/lexical';
         import { registerPlainText } from 'https://esm.sh/@lexical/plain-text';
 
         const { createApp, ref, onMounted } = Vue;
@@ -238,6 +216,7 @@
 
                 const sendToDos = (charOrKey) => {
                     if (!ci.value) return;
+                    console.log(`[DEBUG] Bridge -> DOS: ${charOrKey}`);
                     let needsShift = !!SHIFT_MAP[charOrKey] || (charOrKey.length === 1 && charOrKey >= 'A' && charOrKey <= 'Z');
                     let targetKey = SHIFT_MAP[charOrKey] || charOrKey;
                     let code = K[targetKey.toLowerCase()] || K[targetKey];
@@ -264,23 +243,33 @@
 
                     const initBuffer = () => {
                         editor.update(() => {
-                            $getRoot().append($getRoot().clear().append(ghostBuffer));
+                            const root = $getRoot();
+                            root.clear();
+                            root.append($createTextNode(ghostBuffer));
                             const sel = $getSelection();
                             if (sel) sel.anchor.set('root', center, 'text');
                         });
                     };
                     initBuffer();
 
-                    // GESTURE: Spacebar Swipe
+                    // GESTURE: Spacebar Swipe (Cursor Movement)
                     document.addEventListener('selectionchange', () => {
                         if (document.activeElement !== rootElement || !enableNativeOSK.value) return;
                         editor.read(() => {
                             const sel = $getSelection();
                             if (sel && sel.isCollapsed()) {
                                 const pos = sel.anchor.offset;
-                                if (pos < center) for (let i=0; i<(center-pos); i++) sendToDos('ArrowLeft');
-                                else if (pos > center) for (let i=0; i<(pos-center); i++) sendToDos('ArrowRight');
-                                if (pos !== center) editor.update(() => { const s = $getSelection(); if (s) s.anchor.set(s.anchor.key, center, 'text'); });
+                                if (pos < center) {
+                                    for (let i=0; i<(center-pos); i++) sendToDos('ArrowLeft');
+                                } else if (pos > center) {
+                                    for (let i=0; i<(pos-center); i++) sendToDos('ArrowRight');
+                                }
+                                if (pos !== center) {
+                                    editor.update(() => {
+                                        const s = $getSelection();
+                                        if (s) s.anchor.set(s.anchor.key, center, 'text');
+                                    });
+                                }
                             }
                         });
                     });

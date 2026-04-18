@@ -308,7 +308,6 @@
 
                         Dos(document.getElementById("dos"), {
                             url: "turbocpp.jsdos?v=" + Date.now(),
-                            softKeyboardLayout: [[[" "]]], 
                             onEvent: (event, ci_instance) => {
                                 if (event === "ci-ready") {
                                     ci.value = ci_instance;

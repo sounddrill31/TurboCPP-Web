@@ -23,5 +23,6 @@ Credits
 
 Issues ?
 ========
-Quotes not working
+Quotes not working on firefox
+Mobile version of web page has terrible keyboard support
 Report them [here](https://github.com/sounddrill31/TurboCPP-Web/issues)

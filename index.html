@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Turbo C++ Web - Online Nostalgic Programming Experience</title>
     <meta name="description" content="Run Turbo C++ in your browser using JS-DOS. Experience nostalgic programming with modern convenience.">
     <meta name="keywords" content="Turbo C++, JS-DOS, online IDE, programming, nostalgia">
@@ -27,9 +27,36 @@
     <!-- CSS / Fonts -->
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://v8.js-dos.com/latest/js-dos.css">
+    <style>
+        [v-cloak] { display: none; }
+        #dos:focus { outline: none; }
+        
+        #dos-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Lexical OSK Bridge Styling */
+        #lexical-bridge {
+            position: absolute;
+            left: -9999px;
+            top: 0;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Fullscreen support */
+        :fullscreen #dos-container { width: 100%; height: 100%; background: black; }
+
+        /* Conditional hiding of internal overlay when Native toggle is ON */
+        .native-osk-on .soft-keyboard { display: none !important; }
+    </style>
 </head>
 <body class="bg-white text-black min-h-screen flex flex-col">
-    <div id="app" v-cloak>
+    <div id="app" v-cloak :class="{ 'native-osk-on': enableNativeOSK }">
         <!-- Navigation -->
         <nav class="fixed w-full px-4 py-3 flex justify-between items-center z-50 bg-white border-b-4 border-black">
             <a href="#" class="text-2xl font-bold tracking-tighter uppercase">Turbo C++<span class="text-xs align-super">WEB</span></a>
@@ -52,8 +79,20 @@
                 </h1>
 
                 <!-- JS-DOS Container -->
-                <div class="w-full aspect-[4/3] md:aspect-video bg-black border-[12px] border-black shadow-[20px_20px_0px_0px_rgba(0,0,0,0.1)] relative overflow-hidden group">
+                <div id="dos-container" class="w-full aspect-[4/3] md:aspect-video bg-black border-[12px] border-black shadow-[20px_20px_0px_0px_rgba(0,0,0,0.1)] overflow-hidden" @click="handleViewportClick">
                     <div id="dos"></div>
+                    <!-- Lexical Bridge goes inside for Fullscreen focus -->
+                    <div id="lexical-bridge" contenteditable="true"></div>
+                </div>
+
+                <div class="mt-6 flex flex-col items-center gap-4">
+                    <div class="flex items-center gap-4 p-4 border-4 border-black bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all cursor-pointer" @click="enableNativeOSK = !enableNativeOSK">
+                        <div class="w-12 h-6 border-4 border-black relative bg-white">
+                            <div class="absolute top-0 w-4 h-4 bg-black transition-all" :style="{ left: enableNativeOSK ? '24px' : '0' }"></div>
+                        </div>
+                        <span class="font-bold uppercase tracking-tighter">Native OS Keyboard</span>
+                    </div>
+                    <p class="text-[10px] font-bold uppercase opacity-60">Enabling this opens your device's keyboard on click</p>
                 </div>
 
                 <p class="mt-8 text-lg font-bold uppercase tracking-widest text-center">
@@ -109,14 +148,14 @@
         <!-- Browser Warning -->
         <div v-if="showWarning" @click="showWarning = false" class="fixed top-20 right-4 z-[60] bg-black text-white p-6 border-4 border-white shadow-2xl cursor-pointer max-w-xs transition-all hover:scale-105">
             <p class="font-bold uppercase mb-2">⚠ Browser Warning</p>
-            <p class="text-sm">Non-Chromium browsers may experience issues with key mappings (like + and =).</p>
+            <p class="text-sm">Non-Chromium browsers may experience issues with key mappings.</p>
             <p class="text-xs mt-4 opacity-70 underline">Click to dismiss</p>
         </div>
 
         <!-- Mobile Tip -->
         <div v-if="showMobileTip" @click="showMobileTip = false" class="fixed bottom-8 left-4 z-[60] bg-black text-white p-6 border-4 border-white shadow-2xl cursor-pointer max-w-xs transition-all hover:scale-105">
             <p class="font-bold uppercase mb-2">📱 Mobile Tip</p>
-            <p class="text-sm">You may not have a good experience on a mobile phone as JS-DOS's On-Screen-Keyboard struggles with certain special characters like " @ # etc.</p>
+            <p class="text-sm">Android users: Ensure Gboard suggestions are off for the best experience with special characters.</p>
             <p class="text-xs mt-4 opacity-70 underline">Click to dismiss</p>
         </div>
 
@@ -137,133 +176,173 @@
 
     <!-- Scripts -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-    <script>
+    <script type="module">
+        import { createEditor, COMMAND_PRIORITY_EDITOR, CONTROLLED_TEXT_INSERTION_COMMAND, KEY_BACKSPACE_COMMAND, KEY_ENTER_COMMAND, KEY_TAB_COMMAND, KEY_ESCAPE_COMMAND, $getRoot } from 'https://esm.sh/lexical';
+        import { registerPlainText } from 'https://esm.sh/@lexical/plain-text';
+
         const { createApp, ref, onMounted } = Vue;
 
         createApp({
             setup() {
                 const showWarning = ref(false);
                 const showMobileTip = ref(false);
+                const enableNativeOSK = ref(false);
+                const ci = ref(null);
+                let lexicalRoot = null;
                 
+                // DOS Scancode Constants
+                const K = {
+                    '1': 49, '2': 50, '3': 51, '4': 52, '5': 53, '6': 54, '7': 55, '8': 56, '9': 57, '0': 48,
+                    'q': 81, 'w': 87, 'e': 69, 'r': 82, 't': 84, 'y': 89, 'u': 85, 'i': 73, 'o': 79, 'p': 80,
+                    'a': 65, 's': 83, 'd': 68, 'f': 70, 'g': 71, 'h': 72, 'j': 74, 'k': 75, 'l': 76,
+                    'z': 90, 'x': 88, 'c': 67, 'v': 86, 'b': 66, 'n': 78, 'm': 77,
+                    'Enter': 257, 'Backspace': 259, 'Space': 32, ' ': 32, 'Esc': 256, 'Tab': 258,
+                    'Ctrl': 341, 'Alt': 342, 'Shift': 340,
+                    '-': 45, '=': 61, '[': 91, ']': 93, '\\': 92, ';': 59, '\'': 39, ',': 44, '.': 46, '/': 47, '`': 96
+                };
+
+                const SHIFT_MAP = {
+                    '!': '1', '@': '2', '#': '3', '$': '4', '%': '5', '^': '6', '&': '7', '*': '8', '(': '9', ')': '0',
+                    '_': '-', '+': '=', '{': '[', '}': ']', '|': '\\', ':': ';', '\"': '\'', '<': ',', '>': '.', '?': '/', '~': '`',
+                    'Q': 'q', 'W': 'w', 'E': 'e', 'R': 'r', 'T': 't', 'Y': 'y', 'U': 'u', 'I': 'i', 'O': 'o', 'P': 'p',
+                    'A': 'a', 'S': 's', 'D': 'd', 'F': 'f', 'G': 'g', 'H': 'h', 'J': 'j', 'K': 'k', 'L': 'l',
+                    'Z': 'z', 'X': 'x', 'C': 'c', 'V': 'v', 'B': 'b', 'N': 'n', 'M': 'm'
+                };
+
+                const sendToDos = (charOrKey) => {
+                    if (!ci.value) return;
+                    console.log(`[DEBUG] Lexical -> DOS: ${charOrKey}`);
+                    
+                    let needsShift = !!SHIFT_MAP[charOrKey] || (charOrKey.length === 1 && charOrKey >= 'A' && charOrKey <= 'Z');
+                    let targetKey = SHIFT_MAP[charOrKey] || charOrKey;
+                    let code = K[targetKey.toLowerCase()] || K[targetKey];
+
+                    if (!code) return;
+
+                    if (needsShift) ci.value.sendKeyEvent(340, true);
+                    ci.value.sendKeyEvent(code, true);
+                    setTimeout(() => {
+                        ci.value.sendKeyEvent(code, false);
+                        if (needsShift) ci.value.sendKeyEvent(340, false);
+                    }, 30);
+                };
+
+                const handleViewportClick = () => {
+                    if (enableNativeOSK.value && lexicalRoot) {
+                        lexicalRoot.focus();
+                    }
+                };
+
+                const setupLexical = () => {
+                    const editor = createEditor({
+                        namespace: 'DosBridge',
+                        onError: (e) => console.error(e)
+                    });
+                    const rootElement = document.getElementById('lexical-bridge');
+                    lexicalRoot = rootElement;
+                    editor.setRootElement(rootElement);
+                    registerPlainText(editor);
+
+                    let lastText = "";
+                    editor.registerUpdateListener(({ editorState }) => {
+                        editorState.read(() => {
+                            const currentText = $getRoot().getTextContent();
+                            if (currentText.length > lastText.length) {
+                                // New characters added
+                                const added = currentText.slice(lastText.length);
+                                for (const char of added) sendToDos(char);
+                            } else if (currentText.length < lastText.length) {
+                                // Deletions occurred
+                                const diff = lastText.length - currentText.length;
+                                for (let i = 0; i < diff; i++) sendToDos('Backspace');
+                            }
+                            lastText = currentText;
+                        });
+                    });
+
+                    // Keep bridge clean to prevent overflow
+                    setInterval(() => {
+                        if (lastText.length > 50) {
+                            editor.update(() => {
+                                $getRoot().clear();
+                                lastText = "";
+                            });
+                        }
+                    }, 1000);
+
+                    // Map special keys directly
+                    editor.registerCommand(KEY_ENTER_COMMAND, () => { sendToDos('Enter'); return false; }, COMMAND_PRIORITY_EDITOR);
+                    editor.registerCommand(KEY_TAB_COMMAND, (e) => { e.preventDefault(); sendToDos('Tab'); return false; }, COMMAND_PRIORITY_EDITOR);
+                    editor.registerCommand(KEY_ESCAPE_COMMAND, () => { sendToDos('Esc'); return false; }, COMMAND_PRIORITY_EDITOR);
+
+                    return { editor, rootElement };
+                };
+
                 const loadScript = (url) => {
                     return new Promise((resolve, reject) => {
-                        console.log(`[DEBUG] Loading script: ${url}`);
                         const script = document.createElement("script");
                         script.src = url;
-                        script.onload = () => {
-                            console.log(`[DEBUG] Script loaded: ${url}`);
-                            resolve();
-                        };
-                        script.onerror = () => reject(new Error(`Failed to load script: ${url}`));
+                        script.onload = resolve;
+                        script.onerror = reject;
                         document.head.appendChild(script);
                     });
                 };
 
                 onMounted(async () => {
+                    const { editor, rootElement } = setupLexical();
+
                     try {
-                        // In v8, we need emulators.js specifically for the global emulators object
                         await loadScript("https://v8.js-dos.com/latest/emulators/emulators.js");
-                        // We also need js-dos.js for the player
                         await loadScript("https://v8.js-dos.com/latest/js-dos.js");
                         
-                        // Wait for both window.Dos and window.emulators
                         let attempts = 0;
                         while ((typeof window.Dos === "undefined" || typeof window.emulators === "undefined") && attempts < 50) {
                             await new Promise(r => setTimeout(r, 100));
                             attempts++;
                         }
+                        window.emulators.pathPrefix = "https://v8.js-dos.com/latest/emulators/";
 
-                        console.log("[DEBUG] Initialization sequence starting...");
                         const userAgent = navigator.userAgent;
-                        const isChromium = userAgent.indexOf("Chromium") > -1 || userAgent.indexOf("Chrome") > -1;
-                        if (!isChromium) showWarning.value = true;
+                        if (userAgent.indexOf("Chromium") === -1 && userAgent.indexOf("Chrome") === -1) showWarning.value = true;
+                        if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent)) showMobileTip.value = true;
 
-                        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
-                        if (isMobile) showMobileTip.value = true;
+                        Dos(document.getElementById("dos"), {
+                            url: "turbocpp.jsdos?v=" + Date.now(),
+                            softKeyboardLayout: [[[" "]]], 
+                            onEvent: (event, ci_instance) => {
+                                if (event === "ci-ready") {
+                                    ci.value = ci_instance;
 
-                        const dosElement = document.getElementById("dos");
-                        
-                        if (!dosElement) throw new Error("#dos element not found!");
-                        if (typeof window.Dos === "undefined") throw new Error("window.Dos is undefined!");
-                        if (typeof window.emulators === "undefined") throw new Error("window.emulators is undefined!");
+                                    const observer = new MutationObserver(() => {
+                                        if (!enableNativeOSK.value) return; // Standard OSK handles itself
+                                        
+                                        const softKeyboardEl = document.querySelector('.soft-keyboard');
+                                        const kbBtn = document.querySelector('.jsdos-sidebar .sidebar-button:nth-child(2)');
+                                        
+                                        if (softKeyboardEl || (kbBtn && kbBtn.classList.contains('sidebar-highlight'))) {
+                                            rootElement.focus();
+                                        }
+                                    });
+                                    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
 
-                        console.log("[DEBUG] Environment ready. Configuring emulators...");
-                        
-                        // Clear jsdos storage to avoid stale bundle extraction
-                        try {
-                            console.log("[DEBUG] Clearing JS-DOS storage and IndexedDB...");
-                            if (window.Dos && window.Dos.storage) {
-                                await window.Dos.storage.clear();
-                            }
-                            indexedDB.deleteDatabase("jsdos");
-                        } catch (e) {
-                            console.warn("Failed to clear storage", e);
-                        }
-
-                        const emulators = window.emulators;
-                        emulators.pathPrefix = "https://v8.js-dos.com/latest/emulators/";
-                        
-                        const localUrl = "turbocpp.jsdos?v=" + new Date().getTime();
-
-                        console.log(`[DEBUG] Starting Dos() with local bundle: ${localUrl}`);
-                        Dos(dosElement, {
-                            url: localUrl,
-                            softKeyboardLayout: [
-                                [ // Layout 1: Alphanumeric
-                                    [
-                                        "1 2 3 4 5 6 7 8 9 0",
-                                        "q w e r t y u i o p",
-                                        "a s d f g h j k l {enter}",
-                                        "{lock} z x c v b n m {bksp}",
-                                        "{ctrl} {alt} {space} {symbols} {esc} {tab} {layout}"
-                                    ]
-                                ],
-                                [ // Layout 2: Symbols & Function Keys
-                                    [
-                                        "{f1} {f2} {f3} {f4} {f5} {f6} {f7} {f8} {f9} {f10} {f11} {f12}",
-                                        "! @ # $ % ^ & * ( ) _ +",
-                                        "- = [ ] \\ ; ' , . /",
-                                        "{{ }} < > | : \" ? {enter}",
-                                        "{left} {up} {down} {right} {bksp} {layout}"
-                                    ]
-                                ]
-                            ],
-                            softKeyboardSymbols: [
-                                {
-                                    "{bksp}": "⌫", "{enter}": "⏎", "{lock}": "Caps", "{ctrl}": "Ctrl", "{alt}": "Alt", "{tab}": "Tab", "{esc}": "Esc", "{space}": "Space", "{up}": "↑", "{down}": "↓", "{left}": "←", "{right}": "→", "{layout}": "⌨", "{symbols}": "abc",
-                                    "q": "q", "w": "w", "e": "e", "r": "r", "t": "t", "y": "y", "u": "u", "i": "i", "o": "o", "p": "p", "a": "a", "s": "s", "d": "d", "f": "f", "g": "g", "h": "h", "j": "j", "k": "k", "l": "l", "z": "z", "x": "x", "c": "c", "v": "v", "b": "b", "n": "n", "m": "m",
-                                    "{{": "{", "}}": "}"
-                                },
-                                {
-                                    "{bksp}": "⌫", "{enter}": "⏎", "{lock}": "Caps", "{ctrl}": "Ctrl", "{alt}": "Alt", "{tab}": "Tab", "{esc}": "Esc", "{space}": "Space", "{up}": "↑", "{down}": "↓", "{left}": "←", "{right}": "→", "{layout}": "⌨", "{symbols}": "ABC",
-                                    "q": "Q", "w": "W", "e": "E", "r": "R", "t": "T", "y": "Y", "u": "U", "i": "I", "o": "O", "p": "P", "a": "A", "s": "S", "d": "D", "f": "F", "g": "G", "h": "H", "j": "J", "k": "K", "l": "L", "z": "Z", "x": "X", "c": "C", "v": "V", "b": "B", "n": "N", "m": "M",
-                                    "{{": "{", "}}": "}"
-                                }
-                            ],
-                            onEvent: (event, ci) => {
-                                console.log(`[DEBUG] Event: ${event}`);
-                                if (event === "ready" || event === "ci-ready") {
-                                    console.log("[DEBUG] System ready to interact.");
+                                    const syncFS = () => {
+                                        const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+                                        if (fsEl && !fsEl.contains(rootElement)) {
+                                            fsEl.appendChild(rootElement);
+                                        }
+                                        if (enableNativeOSK.value && lexicalRoot) {
+                                            lexicalRoot.focus();
+                                        }
+                                    };
+                                    document.addEventListener('fullscreenchange', syncFS);
+                                    document.addEventListener('webkitfullscreenchange', syncFS);
                                 }
                             }
                         });
-
-                    } catch (err) {
-                        console.error("[DEBUG] CRITICAL INIT ERROR:", err);
-                        const dosElement = document.getElementById("dos");
-                        if (dosElement) {
-                            dosElement.innerHTML = `<div class="p-8 text-red-500 font-bold text-center uppercase tracking-widest">
-                                Error: System Initialization Failed<br>
-                                <span class="text-xs opacity-50 mt-4 block">${err.message}</span>
-                            </div>`;
-                        }
-                    }
+                    } catch (e) { console.error(e); }
                 });
 
-                return {
-                    showWarning,
-                    showMobileTip
-                };
+                return { showWarning, showMobileTip, enableNativeOSK, handleViewportClick };
             }
         }).mount('#app');
     </script>

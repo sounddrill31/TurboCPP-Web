@@ -54,7 +54,6 @@
                 <!-- JS-DOS Container -->
                 <div class="w-full aspect-[4/3] md:aspect-video bg-black border-[12px] border-black shadow-[20px_20px_0px_0px_rgba(0,0,0,0.1)] relative overflow-hidden group">
                     <div id="dos"></div>
-                    <!-- Overlay if needed -->
                 </div>
 
                 <p class="mt-8 text-lg font-bold uppercase tracking-widest text-center">
@@ -130,8 +129,7 @@
     </div>
 
     <!-- Scripts -->
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <script src="https://v8.js-dos.com/latest/js-dos.js"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <script>
         const { createApp, ref, onMounted } = Vue;
 
@@ -139,21 +137,83 @@
             setup() {
                 const showWarning = ref(false);
                 
-                onMounted(() => {
-                    const userAgent = navigator.userAgent;
-                    const isChromium = userAgent.indexOf("Chromium") > -1 || userAgent.indexOf("Chrome") > -1;
-                    if (!isChromium) {
-                        showWarning.value = true;
-                    }
+                const loadScript = (url) => {
+                    return new Promise((resolve, reject) => {
+                        console.log(`[DEBUG] Loading script: ${url}`);
+                        const script = document.createElement("script");
+                        script.src = url;
+                        script.onload = () => {
+                            console.log(`[DEBUG] Script loaded: ${url}`);
+                            resolve();
+                        };
+                        script.onerror = () => reject(new Error(`Failed to load script: ${url}`));
+                        document.head.appendChild(script);
+                    });
+                };
 
-                    // Initialize JS-DOS v8
-                    const dosElement = document.getElementById("dos");
-                    const emulators = window.emulators;
-                    if (emulators) {
+                onMounted(async () => {
+                    try {
+                        // In v8, we need emulators.js specifically for the global emulators object
+                        await loadScript("https://v8.js-dos.com/latest/emulators/emulators.js");
+                        // We also need js-dos.js for the player
+                        await loadScript("https://v8.js-dos.com/latest/js-dos.js");
+                        
+                        // Wait for both window.Dos and window.emulators
+                        let attempts = 0;
+                        while ((typeof window.Dos === "undefined" || typeof window.emulators === "undefined") && attempts < 50) {
+                            await new Promise(r => setTimeout(r, 100));
+                            attempts++;
+                        }
+
+                        console.log("[DEBUG] Initialization sequence starting...");
+                        const userAgent = navigator.userAgent;
+                        const isChromium = userAgent.indexOf("Chromium") > -1 || userAgent.indexOf("Chrome") > -1;
+                        if (!isChromium) showWarning.value = true;
+
+                        const dosElement = document.getElementById("dos");
+                        
+                        if (!dosElement) throw new Error("#dos element not found!");
+                        if (typeof window.Dos === "undefined") throw new Error("window.Dos is undefined!");
+                        if (typeof window.emulators === "undefined") throw new Error("window.emulators is undefined!");
+
+                        console.log("[DEBUG] Environment ready. Configuring emulators...");
+                        
+                        // Clear jsdos storage to avoid stale bundle extraction
+                        try {
+                            console.log("[DEBUG] Clearing JS-DOS storage and IndexedDB...");
+                            if (window.Dos && window.Dos.storage) {
+                                await window.Dos.storage.clear();
+                            }
+                            indexedDB.deleteDatabase("jsdos");
+                        } catch (e) {
+                            console.warn("Failed to clear storage", e);
+                        }
+
+                        const emulators = window.emulators;
                         emulators.pathPrefix = "https://v8.js-dos.com/latest/emulators/";
-                        Dos(dosElement).run("turbocpp.jsdos").then((ci) => {
-                            console.log("DOS initialized", ci);
+                        
+                        const localUrl = "turbocpp.jsdos?v=" + new Date().getTime();
+
+                        console.log(`[DEBUG] Starting Dos() with local bundle: ${localUrl}`);
+                        Dos(dosElement, {
+                            url: localUrl,
+                            onEvent: (event, ci) => {
+                                console.log(`[DEBUG] Event: ${event}`);
+                                if (event === "ready" || event === "ci-ready") {
+                                    console.log("[DEBUG] System ready to interact.");
+                                }
+                            }
                         });
+
+                    } catch (err) {
+                        console.error("[DEBUG] CRITICAL INIT ERROR:", err);
+                        const dosElement = document.getElementById("dos");
+                        if (dosElement) {
+                            dosElement.innerHTML = `<div class="p-8 text-red-500 font-bold text-center uppercase tracking-widest">
+                                Error: System Initialization Failed<br>
+                                <span class="text-xs opacity-50 mt-4 block">${err.message}</span>
+                            </div>`;
+                        }
                     }
                 });
 

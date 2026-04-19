@@ -95,7 +95,7 @@
                 </div>
 
                 <!-- Simple Sliding Toggle (Pure Tailwind) -->
-                <div class="mt-8 flex flex-col items-center gap-2 mb-12">
+                <div class="mt-8 flex flex-col md:flex-row items-center gap-4 mb-12">
                     <div class="flex items-center gap-6 px-6 py-4 border-4 border-black bg-white cursor-pointer shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all active:shadow-none active:translate-x-1 active:translate-y-1 select-none" @click="enableNativeOSK = !enableNativeOSK">
                         <!-- Track -->
                         <div class="w-16 h-8 border-4 border-black relative transition-colors duration-300" :class="enableNativeOSK ? 'bg-black' : 'bg-white'">
@@ -104,7 +104,27 @@
                         </div>
                         <span class="font-bold text-xl uppercase tracking-tighter">NATIVE OS KEYBOARD</span>
                     </div>
-                    <p class="text-[10px] font-bold uppercase tracking-widest opacity-60 text-center">ENABLING THIS OPENS YOUR DEVICE'S KEYBOARD ON CLICK</p>
+
+                    <div class="flex items-center gap-6 px-6 py-4 border-4 border-black bg-white cursor-pointer shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all active:shadow-none active:translate-x-1 active:translate-y-1 select-none" @click="toggleFullscreen">
+                        <span class="font-bold text-xl uppercase tracking-tighter">FULLSCREEN</span>
+                    </div>
+                </div>
+
+                <!-- Clipboard Tools -->
+                <div class="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-4 mb-12">
+                    <div @click="pasteFromClipboard" class="flex items-center justify-center gap-4 px-6 py-4 border-4 border-black bg-white cursor-pointer shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all active:shadow-none active:translate-x-1 active:translate-y-1 select-none" :class="{ 'opacity-50 pointer-events-none': pasting }">
+                        <span class="font-bold text-xl uppercase tracking-tighter">{{ pasting ? 'PASTING...' : 'PASTE FROM CLIPBOARD' }}</span>
+                    </div>
+                    <div @click="copyFromDos" class="flex items-center justify-center gap-4 px-6 py-4 border-4 border-black bg-white cursor-pointer shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all active:shadow-none active:translate-x-1 active:translate-y-1 select-none">
+                        <span class="font-bold text-xl uppercase tracking-tighter">COPY FILE FROM DOS</span>
+                    </div>
+                </div>
+
+                <div v-if="pasting" class="w-full max-w-5xl mb-8 flex flex-col items-center">
+                    <div class="w-full h-4 border-4 border-black bg-white relative">
+                        <div class="h-full bg-black transition-all duration-100" :style="{ width: (pasteProgress * 100) + '%' }"></div>
+                    </div>
+                    <p class="mt-2 text-[10px] font-bold uppercase tracking-widest">PASTING: DO NOT TYPE • {{ Math.round(pasteProgress * 100) }}% COMPLETE • <span class="underline cursor-pointer" @click="stopPaste">STOP</span></p>
                 </div>
 
                 <p class="mt-8 text-lg font-bold uppercase tracking-widest text-center">
@@ -112,6 +132,29 @@
                 </p>
             </div>
         </header>
+
+        <!-- File Picker Modal -->
+        <div v-if="showFilePicker" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" @click.self="showFilePicker = false">
+            <div class="bg-white border-8 border-black w-full max-w-2xl p-8 shadow-[20px_20px_0px_0px_rgba(255,255,255,0.2)]">
+                <div class="flex justify-between items-start mb-8">
+                    <h2 class="text-4xl font-bold uppercase tracking-tighter">EXTRACT FILE</h2>
+                    <button @click="showFilePicker = false" class="text-2xl font-bold border-4 border-black px-4 hover:bg-black hover:text-white transition-colors">X</button>
+                </div>
+                
+                <p class="font-bold mb-4 uppercase text-sm">Select a file to copy to system clipboard:</p>
+                <div class="border-4 border-black max-h-64 overflow-y-auto mb-6">
+                    <div v-if="dosFiles.length === 0" class="p-4 text-center opacity-50 font-bold">NO FILES FOUND IN C:\BIN</div>
+                    <div v-for="file in dosFiles" :key="file" @click="selectedFile = file" :class="{ 'bg-black text-white': selectedFile === file }" class="p-4 border-b-2 border-black cursor-pointer font-bold hover:bg-black hover:text-white transition-colors flex justify-between">
+                        <span>{{ file }}</span>
+                        <span v-if="selectedFile === file">SELECTED</span>
+                    </div>
+                </div>
+
+                <div class="flex gap-4">
+                    <button @click="performCopy" :disabled="!selectedFile" class="flex-1 border-4 border-black py-4 font-bold uppercase hover:bg-black hover:text-white transition-all disabled:opacity-30 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1">COPY TO CLIPBOARD</button>
+                </div>
+            </div>
+        </div>
 
         <!-- Marquee -->
         <div class="bg-black text-white py-4 overflow-hidden whitespace-nowrap border-y-4 border-black">
@@ -196,6 +239,8 @@
         createApp({
             setup() {
                 const showWarning = ref(false), showMobileTip = ref(false), enableNativeOSK = ref(false), ci = ref(null);
+                const pasting = ref(false), pasteProgress = ref(0), stopPasteFlag = ref(false);
+                const showFilePicker = ref(false), dosFiles = ref([]), selectedFile = ref(null);
                 let lexicalRoot = null;
                 
                 const K = {
@@ -214,22 +259,93 @@
                     '_':'-','+':'=','{':'[','}':']','|':'\\',':':';','\"':'\'','<':',','>':'.','?':'/','~':'`','Q':'q','W':'w','E':'e','R':'r','T':'t','Y':'y','U':'u','I':'i','O':'o','P':'p','A':'a','S':'s','D':'d','F':'f','G':'g','H':'h','J':'j','K':'k','L':'l','Z':'z','X':'x','C':'c','V':'v','B':'b','N':'n','M':'m'
                 };
 
-                const sendToDos = (charOrKey) => {
+                const sendToDos = async (charOrKey) => {
                     if (!ci.value) return;
-                    console.log(`[DEBUG] Bridge -> DOS: ${charOrKey}`);
                     let needsShift = !!SHIFT_MAP[charOrKey] || (charOrKey.length === 1 && charOrKey >= 'A' && charOrKey <= 'Z');
                     let targetKey = SHIFT_MAP[charOrKey] || charOrKey;
                     let code = K[targetKey.toLowerCase()] || K[targetKey];
                     if (!code) return;
+                    
                     if (needsShift) ci.value.sendKeyEvent(340, true);
                     ci.value.sendKeyEvent(code, true);
-                    setTimeout(() => {
-                        ci.value.sendKeyEvent(code, false);
-                        if (needsShift) ci.value.sendKeyEvent(340, false);
-                    }, 30);
+                    await new Promise(r => setTimeout(r, 10)); 
+                    ci.value.sendKeyEvent(code, false);
+                    if (needsShift) ci.value.sendKeyEvent(340, false);
+                    await new Promise(r => setTimeout(r, 10));
                 };
 
                 const handleViewportClick = () => { if (enableNativeOSK.value && lexicalRoot) lexicalRoot.focus(); };
+
+                const toggleFullscreen = () => {
+                    const el = document.getElementById('dos-container');
+                    if (!document.fullscreenElement) {
+                        el.requestFullscreen().catch(err => console.error(err));
+                    } else {
+                        document.exitFullscreen();
+                    }
+                };
+
+                const pasteFromClipboard = async () => {
+                    if (!ci.value || pasting.value) return;
+                    try {
+                        const text = await navigator.clipboard.readText();
+                        if (!text) return;
+                        
+                        pasting.value = true;
+                        pasteProgress.value = 0;
+                        stopPasteFlag.value = false;
+                        
+                        const chars = text.split('');
+                        for (let i = 0; i < chars.length; i++) {
+                            if (stopPasteFlag.value) break;
+                            const char = chars[i];
+                            await sendToDos(char === '\n' ? 'Enter' : char);
+                            pasteProgress.value = (i + 1) / chars.length;
+                            // Small breathing room for the emulator every 10 chars
+                            if (i % 10 === 0) await new Promise(r => setTimeout(r, 20));
+                        }
+                    } catch (err) {
+                        console.error('Paste failed:', err);
+                    } finally {
+                        pasting.value = false;
+                        pasteProgress.value = 0;
+                    }
+                };
+
+                const stopPaste = () => { stopPasteFlag.value = true; };
+
+                const copyFromDos = async () => {
+                    if (!ci.value) return;
+                    try {
+                        // In JS-DOS v8, we can list files using fs().list
+                        // Default TC project path is C:\BIN or C:\SOURCE
+                        const files = await ci.value.fs().list('C:/BIN');
+                        // Filter for common code extensions, exclude system files
+                        dosFiles.value = files
+                            .filter(f => f.name.match(/\.(C|CPP|H|BAK|TXT)$/i))
+                            .map(f => f.name)
+                            .sort();
+                        showFilePicker.value = true;
+                        selectedFile.value = null;
+                    } catch (err) {
+                        console.error('Failed to list files:', err);
+                        alert('Could not access DOS filesystem. Make sure the emulator is running.');
+                    }
+                };
+
+                const performCopy = async () => {
+                    if (!selectedFile.value || !ci.value) return;
+                    try {
+                        const content = await ci.value.fs().extract(`C:/BIN/${selectedFile.value}`);
+                        const text = new TextDecoder().decode(content);
+                        await navigator.clipboard.writeText(text);
+                        alert(`Copied ${selectedFile.value} to clipboard!`);
+                        showFilePicker.value = false;
+                    } catch (err) {
+                        console.error('Copy failed:', err);
+                        alert('Failed to copy file.');
+                    }
+                };
 
                 const setupLexical = () => {
                     const editor = createEditor({ namespace: 'DosBridge', onError: (e) => console.error(e) });
@@ -259,12 +375,14 @@
                             const sel = $getSelection();
                             if (sel && sel.isCollapsed()) {
                                 const pos = sel.anchor.offset;
-                                if (pos < center) {
-                                    for (let i=0; i<(center-pos); i++) sendToDos('ArrowLeft');
-                                } else if (pos > center) {
-                                    for (let i=0; i<(pos-center); i++) sendToDos('ArrowRight');
-                                }
                                 if (pos !== center) {
+                                    (async () => {
+                                        if (pos < center) {
+                                            for (let i=0; i<(center-pos); i++) await sendToDos('ArrowLeft');
+                                        } else if (pos > center) {
+                                            for (let i=0; i<(pos-center); i++) await sendToDos('ArrowRight');
+                                        }
+                                    })();
                                     editor.update(() => {
                                         const s = $getSelection();
                                         if (s) s.anchor.set(s.anchor.key, center, 'text');
@@ -281,7 +399,9 @@
                             prevEditorState.read(() => {
                                 const prev = $getRoot().getTextContent();
                                 if (cur.length < prev.length) {
-                                    for (let i=0; i<(prev.length - cur.length); i++) sendToDos('Backspace');
+                                    (async () => {
+                                        for (let i=0; i<(prev.length - cur.length); i++) await sendToDos('Backspace');
+                                    })();
                                     initBuffer();
                                 }
                             });
@@ -289,7 +409,9 @@
                     });
 
                     editor.registerCommand(CONTROLLED_TEXT_INSERTION_COMMAND, (text) => {
-                        for (const char of text) sendToDos(char);
+                        (async () => {
+                            for (const char of text) await sendToDos(char);
+                        })();
                         return true; 
                     }, COMMAND_PRIORITY_CRITICAL);
 
@@ -344,7 +466,12 @@
                     } catch (e) { console.error(e); }
                 });
 
-                return { showWarning, showMobileTip, enableNativeOSK, handleViewportClick };
+                return { 
+                    showWarning, showMobileTip, enableNativeOSK, handleViewportClick,
+                    pasting, pasteProgress, stopPaste, pasteFromClipboard,
+                    showFilePicker, dosFiles, selectedFile, copyFromDos, performCopy,
+                    toggleFullscreen
+                };
             }
         }).mount('#app');
     </script>

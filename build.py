@@ -59,7 +59,7 @@ def create_jsdos_bundle():
         shutil.copy("index.html", os.path.join(output_dir, "index.html"))
     
     # Copy assets if they exist
-    for asset in ["favicon.ico", "manifest.json", "turboc.png"]:
+    for asset in ["favicon.ico", "manifest.json", "turboc.png", "google47fdf9565eedcbc9.html"]:
         if os.path.exists(asset):
             shutil.copy(asset, os.path.join(output_dir, asset))
             
